@@ -1668,6 +1668,7 @@ func (w *worker) generateWork(params *generateParams) (*types.Block, *big.Int, e
 		return finalizeFn(work, time.Now(), nil, nil, nil, true)
 	}
 
+	// TODO - we need to yet brainstorm validator payouts in the case of PEPC-Boost
 	var paymentTxReserve *proposerTxReservation
 	// no need of adding payouts if we are assembling txs
 	if !work.isAssembler {

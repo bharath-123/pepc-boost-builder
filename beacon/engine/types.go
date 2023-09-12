@@ -22,10 +22,12 @@ import (
 
 	"github.com/attestantio/go-eth2-client/spec/bellatrix"
 	"github.com/attestantio/go-eth2-client/spec/capella"
+	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/trie"
+	boostTypes "github.com/flashbots/go-boost-utils/types"
 )
 
 //go:generate go run github.com/fjl/gencodec -type PayloadAttributes -field-override payloadAttributesMarshaling -out gen_blockparams.go
@@ -141,7 +143,7 @@ func encodeTransactions(txs []*types.Transaction) [][]byte {
 	return enc
 }
 
-func decodeTransactions(enc [][]byte) ([]*types.Transaction, error) {
+func DecodeTransactions(enc [][]byte) ([]*types.Transaction, error) {
 	var txs = make([]*types.Transaction, len(enc))
 	for i, encTx := range enc {
 		var tx types.Transaction
@@ -164,7 +166,7 @@ func decodeTransactions(enc [][]byte) ([]*types.Transaction, error) {
 // Withdrawals value will propagate through the returned block. Empty
 // Withdrawals value must be passed via non-nil, length 0 value in params.
 func ExecutableDataToBlock(params ExecutableData) (*types.Block, error) {
-	txs, err := decodeTransactions(params.Transactions)
+	txs, err := DecodeTransactions(params.Transactions)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +248,7 @@ func ExecutionPayloadToBlock(payload *bellatrix.ExecutionPayload) (*types.Block,
 	for i, txHexBytes := range payload.Transactions {
 		transactionBytes[i] = txHexBytes[:]
 	}
-	txs, err := decodeTransactions(transactionBytes)
+	txs, err := DecodeTransactions(transactionBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +288,7 @@ func ExecutionPayloadV2ToBlock(payload *capella.ExecutionPayload) (*types.Block,
 	for i, txHexBytes := range payload.Transactions {
 		transactionBytes[i] = txHexBytes[:]
 	}
-	txs, err := decodeTransactions(transactionBytes)
+	txs, err := DecodeTransactions(transactionBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -330,4 +332,45 @@ func ExecutionPayloadV2ToBlock(payload *capella.ExecutionPayload) (*types.Block,
 	}
 	block := types.NewBlockWithHeader(header).WithBody(txs, nil /* uncles */).WithWithdrawals(withdrawals)
 	return block, nil
+}
+
+func ExecutableDataToCapellaExecutionPayload(data *ExecutableData) (*capella.ExecutionPayload, error) {
+	transactionData := make([]bellatrix.Transaction, len(data.Transactions))
+	for i, tx := range data.Transactions {
+		transactionData[i] = bellatrix.Transaction(tx)
+	}
+
+	withdrawalData := make([]*capella.Withdrawal, len(data.Withdrawals))
+	for i, wd := range data.Withdrawals {
+		withdrawalData[i] = &capella.Withdrawal{
+			Index:          capella.WithdrawalIndex(wd.Index),
+			ValidatorIndex: phase0.ValidatorIndex(wd.Validator),
+			Address:        bellatrix.ExecutionAddress(wd.Address),
+			Amount:         phase0.Gwei(wd.Amount),
+		}
+	}
+
+	baseFeePerGas := new(boostTypes.U256Str)
+	err := baseFeePerGas.FromBig(data.BaseFeePerGas)
+	if err != nil {
+		return nil, err
+	}
+
+	return &capella.ExecutionPayload{
+		ParentHash:    [32]byte(data.ParentHash),
+		FeeRecipient:  [20]byte(data.FeeRecipient),
+		StateRoot:     [32]byte(data.StateRoot),
+		ReceiptsRoot:  [32]byte(data.ReceiptsRoot),
+		LogsBloom:     types.BytesToBloom(data.LogsBloom),
+		PrevRandao:    [32]byte(data.Random),
+		BlockNumber:   data.Number,
+		GasLimit:      data.GasLimit,
+		GasUsed:       data.GasUsed,
+		Timestamp:     data.Timestamp,
+		ExtraData:     data.ExtraData,
+		BaseFeePerGas: *baseFeePerGas,
+		BlockHash:     [32]byte(data.BlockHash),
+		Transactions:  transactionData,
+		Withdrawals:   withdrawalData,
+	}, nil
 }

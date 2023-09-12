@@ -121,6 +121,10 @@ func (r *LocalRelay) SubmitBlockCapella(msg *capellaapi.SubmitBlockRequest, _ Va
 	return r.submitBlockCapella(msg)
 }
 
+func (r *LocalRelay) IsPepcRelayer() (bool, error) {
+	return true, nil
+}
+
 func (r *LocalRelay) Config() RelayConfig {
 	// local relay does not need config as it is submitting to its own internal endpoint
 	return RelayConfig{}

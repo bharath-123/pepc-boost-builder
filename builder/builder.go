@@ -46,6 +46,10 @@ type ValidatorData struct {
 
 type IRelay interface {
 	SubmitBlock(msg *bellatrixapi.SubmitBlockRequest, vd ValidatorData) error
+	// this is for the builder to enable pepc-boost specific features. it might be useful
+	// for payouts where the actual validator and builder payout will get appeneded by the builder.
+	// payouts is still a W.I.P
+	IsPepcRelayer() (bool, error)
 	SubmitBlockCapella(msg *capellaapi.SubmitBlockRequest, vd ValidatorData) error
 	GetValidatorForSlot(nextSlot uint64) (ValidatorData, error)
 	Config() RelayConfig

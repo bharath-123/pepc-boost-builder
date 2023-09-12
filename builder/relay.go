@@ -193,6 +193,23 @@ func (r *RemoteRelay) SubmitBlockCapella(msg *capella.SubmitBlockRequest, _ Vali
 	return nil
 }
 
+func (r *RemoteRelay) IsPepcRelayer() (bool, error) {
+	log.Info("checking if remote relay is a pepc-relay", "endpoint", r.config.Endpoint)
+
+	endpoint := r.config.Endpoint + "/relay/v1/data/is_pepc_relayer"
+
+	var isPepcRelayer bool
+	code, err := SendHTTPRequest(context.TODO(), *http.DefaultClient, http.MethodPost, endpoint, nil, isPepcRelayer)
+	if err != nil {
+		return false, fmt.Errorf("error sending http request to relay %s. err: %w", r.config.Endpoint, err)
+	}
+	if code > 299 {
+		return false, fmt.Errorf("non-ok response code %d from relay %s", code, r.config.Endpoint)
+	}
+
+	return isPepcRelayer, nil
+}
+
 func (r *RemoteRelay) getSlotValidatorMapFromRelay() (map[uint64]ValidatorData, error) {
 	var dst GetValidatorRelayResponse
 	code, err := SendHTTPRequest(context.TODO(), *http.DefaultClient, http.MethodGet, r.config.Endpoint+"/relay/v1/builder/validators", nil, &dst)

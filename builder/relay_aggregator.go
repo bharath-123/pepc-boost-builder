@@ -81,6 +81,10 @@ func (r *RemoteRelayAggregator) SubmitBlockCapella(msg *capella.SubmitBlockReque
 	return nil
 }
 
+func (r *RemoteRelayAggregator) IsPepcRelayer() (bool, error) {
+	return false, fmt.Errorf("not implemented")
+}
+
 type RelayValidatorRegistration struct {
 	vd     ValidatorData
 	relayI int // index into relays array to preserve relative order

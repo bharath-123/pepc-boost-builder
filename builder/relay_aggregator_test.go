@@ -68,6 +68,10 @@ func (r *testRelay) SubmitBlockCapella(msg *capella.SubmitBlockRequest, registra
 	return r.sbError
 }
 
+func (r *testRelay) IsPepcRelayer() (bool, error) {
+	return false, nil
+}
+
 func (r *testRelay) GetValidatorForSlot(nextSlot uint64) (ValidatorData, error) {
 	r.requestedSlot = nextSlot
 	return r.gvsVd, r.gvsErr

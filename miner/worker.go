@@ -1423,10 +1423,8 @@ func (w *worker) fillTransactionsSelectAlgo(interrupt *int32, env *environment) 
 	return blockBundles, allBundles, usedSbundles, mempoolTxHashes, err
 }
 
-// fillTransactions retrieves the pending transactions from the txpool and fills them
-// into the given sealing block. The transaction selection and ordering strategy can
-// be customized with the plugin in the future.
-// Returns error if any, otherwise the bundles that made it into the block and all bundles that passed simulation
+// fillAssemblerTransactions builds a block by merging the ToB txs and RoB txs by putting the ToB txs at the top and filling the rest with the
+// block with the RoB txs
 func (w *worker) fillAssemblerTransactions(interrupt *int32, env *environment) ([]types.SimulatedBundle, []types.SimulatedBundle, map[common.Hash]struct{}, error) {
 
 	assemblerTxs := env.assemblerTxs

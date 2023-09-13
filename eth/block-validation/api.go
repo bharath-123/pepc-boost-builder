@@ -429,6 +429,9 @@ func (api *BlockValidationAPI) BlockAssembler(params *BlockAssemblerRequest) (*c
 	}
 
 	finalPayload, err := engine.ExecutableDataToCapellaExecutionPayload(resolvedBlock.ExecutionPayload)
+	if err != nil {
+		return nil, err
+	}
 
 	return finalPayload, nil
 }

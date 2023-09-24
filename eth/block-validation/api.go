@@ -380,8 +380,6 @@ func (api *BlockValidationAPI) BlockAssembler(params *BlockAssemblerRequest) (*c
 		}
 	}
 
-	// assemble the txs in map[sender]txs format and pass it in the BuildPayload call
-
 	robTxs := robBlock.Transactions()
 	block, err := api.eth.Miner().PayloadAssembler(&miner.BuildPayloadArgs{
 		Parent:       common.Hash(params.RobPayload.ExecutionPayload.ParentHash),

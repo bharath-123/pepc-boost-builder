@@ -284,7 +284,7 @@ func (b *BeaconClient) SubscribeToPayloadAttributesEvents(payloadAttrC chan type
 		client := sse.NewClient(eventsURL)
 		err := client.SubscribeRawWithContext(b.ctx, func(msg *sse.Event) {
 			// print msg.Data as a string
-			log.Debug("payload_attributes event", "data", string(msg.Data))
+			log.Info("DEBUG: payload_attributes event", "data", string(msg.Data))
 
 			err := json.Unmarshal(msg.Data, payloadAttributesResp)
 			if err != nil {

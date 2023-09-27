@@ -366,29 +366,9 @@ func (api *BlockValidationAPI) BlockAssembler(params *BlockAssemblerRequest) (*c
 	tobTxs := types.Transactions(decodedTobTxs)
 
 	// TODO - check for gas limits
-	// TODO - support for payouts
 
 	// TODO - if there are no TOB txs then we can just simulate the block rather then re-assembling it.
 	// These are TODOs for now to simplify integration testing
-
-	// check if there are any duplicate txs
-	// we can error out if there is a nonce gap
-	// TODO - don't error out, but drop the duplicate tx in the ROB block
-	seenTxMap := make(map[common.Hash]struct{})
-	for _, tx := range tobTxs {
-		// If we see nonce reuse in TOB then fail
-		if _, ok := seenTxMap[tx.Hash()]; ok {
-			return nil, errors.New("duplicate tx")
-		}
-		seenTxMap[tx.Hash()] = struct{}{}
-	}
-	for _, tx := range robBlock.Transactions() {
-		// if we see nonce re-use in TOB vs ROB then drop txs the txs in ROB
-		if _, ok := seenTxMap[tx.Hash()]; ok {
-			return nil, errors.New("duplicate tx")
-		}
-		seenTxMap[tx.Hash()] = struct{}{}
-	}
 
 	withdrawals := make(types.Withdrawals, len(params.RobPayload.ExecutionPayload.Withdrawals))
 	for i, withdrawal := range params.RobPayload.ExecutionPayload.Withdrawals {
@@ -400,14 +380,11 @@ func (api *BlockValidationAPI) BlockAssembler(params *BlockAssemblerRequest) (*c
 		}
 	}
 
-	// assemble the txs in map[sender]txs format and pass it in the BuildPayload call
-
 	robTxs := robBlock.Transactions()
 	block, err := api.eth.Miner().PayloadAssembler(&miner.BuildPayloadArgs{
-		Parent:    common.Hash(params.RobPayload.ExecutionPayload.ParentHash),
-		Timestamp: params.RobPayload.ExecutionPayload.Timestamp,
-		// TODO - this should be relayer fee recipient. We will implement payouts later
-		FeeRecipient: common.Address(params.RobPayload.Message.ProposerFeeRecipient),
+		Parent:       common.Hash(params.RobPayload.ExecutionPayload.ParentHash),
+		Timestamp:    params.RobPayload.ExecutionPayload.Timestamp,
+		FeeRecipient: common.Address(params.RobPayload.ExecutionPayload.FeeRecipient),
 		GasLimit:     params.RegisteredGasLimit,
 		Random:       params.RobPayload.ExecutionPayload.PrevRandao,
 		Withdrawals:  withdrawals,

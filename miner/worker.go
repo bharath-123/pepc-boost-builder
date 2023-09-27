@@ -1729,7 +1729,7 @@ func (w *worker) finalizeBlock(work *environment, withdrawals types.Withdrawals,
 		return block, big.NewInt(0), nil
 	}
 
-	var blockProfit *big.Int
+	blockProfit := big.NewInt(0)
 	if !work.isAssembler {
 		blockProfit, err = w.checkProposerPayment(work, validatorCoinbase)
 		if err != nil {

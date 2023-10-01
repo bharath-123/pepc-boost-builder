@@ -340,10 +340,13 @@ func (b *Builder) OnPayloadAttribute(attrs *types.BuilderPayloadAttributes) erro
 		return nil
 	}
 
+	log.Info("DEBUG: Getting validator for slot", "slot", attrs.Slot)
 	vd, err := b.relay.GetValidatorForSlot(attrs.Slot)
 	if err != nil {
 		return fmt.Errorf("could not get validator while submitting block for slot %d - %w", attrs.Slot, err)
 	}
+
+	log.Info("DEBUG: Getting validator for slot", "slot", attrs.Slot, "vd", vd)
 
 	attrs.SuggestedFeeRecipient = [20]byte(vd.FeeRecipient)
 	attrs.GasLimit = vd.GasLimit

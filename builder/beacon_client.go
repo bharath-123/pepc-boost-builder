@@ -278,7 +278,7 @@ func (b *BeaconClient) SubscribeToPayloadAttributesEvents(payloadAttrC chan type
 	payloadAttributesResp := new(PayloadAttributesEvent)
 
 	eventsURL := fmt.Sprintf("%s/eth/v1/events?topics=payload_attributes", b.endpoint)
-	log.Info("subscribing to payload_attributes events")
+	log.Info("subscribing to payload_attributes events with endpoint", "endpoint", b.endpoint)
 
 	for {
 		client := sse.NewClient(eventsURL)

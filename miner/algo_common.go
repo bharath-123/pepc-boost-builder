@@ -149,6 +149,7 @@ func applyTransactionWithBlacklist(
 		snap := statedb.Snapshot()
 		receipt, err := core.ApplyTransaction(config, bc, author, gp, statedb, header, tx, usedGas, cfg, nil)
 		if err != nil {
+			log.Info("DEBUG: Payment tx failedd!!")
 			statedb.RevertToSnapshot(snap)
 		}
 		return receipt, statedb, err

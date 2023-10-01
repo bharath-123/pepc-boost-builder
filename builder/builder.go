@@ -340,13 +340,21 @@ func (b *Builder) OnPayloadAttribute(attrs *types.BuilderPayloadAttributes) erro
 		return nil
 	}
 
-	log.Info("DEBUG: Getting validator for slot", "slot", attrs.Slot)
-	vd, err := b.relay.GetValidatorForSlot(attrs.Slot)
-	if err != nil {
-		return fmt.Errorf("could not get validator while submitting block for slot %d - %w", attrs.Slot, err)
-	}
+	//log.Info("DEBUG: Getting validator for slot", "slot", attrs.Slot)
+	//vd, err := b.relay.GetValidatorForSlot(attrs.Slot)
+	//if err != nil {
+	//	return fmt.Errorf("could not get validator while submitting block for slot %d - %w", attrs.Slot, err)
+	//}
+	//
+	//log.Info("DEBUG: Getting validator for slot", "slot", attrs.Slot, "vd", vd)
 
-	log.Info("DEBUG: Getting validator for slot", "slot", attrs.Slot, "vd", vd)
+	feeRec := common.HexToAddress("0x77830EEF26f9d6960a4614e55dC22f70542F8f00")
+
+	vd := ValidatorData{
+		Pubkey:       "0x8000025593183bad1730e78b87b6bce428492e3bf9142d2609032daf674596f955d6403481c7d84809905a262c0136e2",
+		FeeRecipient: [20]byte(feeRec),
+		GasLimit:     30000000,
+	}
 
 	attrs.SuggestedFeeRecipient = [20]byte(vd.FeeRecipient)
 	attrs.GasLimit = vd.GasLimit

@@ -278,12 +278,10 @@ func (b *BeaconClient) SubscribeToPayloadAttributesEvents(payloadAttrC chan type
 	payloadAttributesResp := new(PayloadAttributesEvent)
 
 	eventsURL := fmt.Sprintf("%s/eth/v1/events?topics=payload_attributes", b.endpoint)
-	log.Info("subscribing to payload_attributes events with endpoint", "endpoint", b.endpoint)
 
 	for {
 		client := sse.NewClient(eventsURL)
 		err := client.SubscribeRawWithContext(b.ctx, func(msg *sse.Event) {
-			log.Info("DEBUG: received payload_attributes event", "data", string(msg.Data))
 			err := json.Unmarshal(msg.Data, payloadAttributesResp)
 			if err != nil {
 				log.Error("could not unmarshal payload_attributes event", "err", err)

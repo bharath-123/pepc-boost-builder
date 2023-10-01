@@ -1617,6 +1617,7 @@ func (w *worker) getSimulatedBundles(env *environment) ([]types.SimulatedBundle,
 func (w *worker) generateWork(params *generateParams) (*types.Block, *big.Int, error) {
 	start := time.Now()
 	validatorCoinbase := params.coinbase
+	log.Info("DEBUG: validatorCoinbase", "validatorCoinbase", validatorCoinbase.String())
 	// Set builder coinbase to be passed to beacon header
 	params.coinbase = w.coinbase
 

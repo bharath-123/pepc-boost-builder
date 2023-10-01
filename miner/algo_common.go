@@ -191,7 +191,7 @@ func applyTransactionWithBlacklist(
 
 	receipt, err := core.ApplyTransaction(config, bc, author, gasPoolTmp, statedb, header, tx, &usedGasTmp, cfg, hook)
 	if err != nil {
-		statedb.RevertToSnapshot(snap)
+=		statedb.RevertToSnapshot(snap)
 		return receipt, statedb, err
 	}
 

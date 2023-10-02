@@ -301,13 +301,15 @@ func (api *BlockValidationAPI) ValidateBuilderSubmissionV2(params *BuilderBlockV
 }
 
 type TobValidationRequest struct {
-	TobTxs     bellatrixUtil.ExecutionPayloadTransactions
-	ParentHash string
+	TobTxs               bellatrixUtil.ExecutionPayloadTransactions
+	ParentHash           string
+	ProposerFeeRecipient string
 }
 
 type IntermediateTobValidationRequest struct {
-	TobTxs     []byte `json:"tob_txs"`
-	ParentHash string `json:"parent_hash"`
+	TobTxs               []byte `json:"tob_txs"`
+	ParentHash           string `json:"parent_hash"`
+	ProposerFeeRecipient string `json:"proposer_fee_recipient"`
 }
 
 func (t *TobValidationRequest) MarshalJson() ([]byte, error) {
@@ -317,8 +319,9 @@ func (t *TobValidationRequest) MarshalJson() ([]byte, error) {
 	}
 
 	intermediateStruct := IntermediateTobValidationRequest{
-		TobTxs:     sszedTobTxs,
-		ParentHash: t.ParentHash,
+		TobTxs:               sszedTobTxs,
+		ParentHash:           t.ParentHash,
+		ProposerFeeRecipient: t.ProposerFeeRecipient,
 	}
 
 	return json.Marshal(intermediateStruct)
@@ -370,7 +373,22 @@ func (api *BlockValidationAPI) ValidateTobSubmission(params *TobValidationReques
 		return err
 	}
 
+	// check if payout tx is present at the end
+	payoutTx := decodedTobTxs[len(decodedTobTxs)-1]
+	if payoutTx.To() != nil && payoutTx.To().String() != params.ProposerFeeRecipient {
+		return fmt.Errorf("payout tx recipient %s does not match proposer fee recipient %s", payoutTx.To().String(), params.ProposerFeeRecipient)
+	}
+	if payoutTx.Data() != nil {
+		return fmt.Errorf("payout tx data is malformed")
+	}
+	if payoutTx.Value().Cmp(big.NewInt(0)) == 0 {
+		return fmt.Errorf("payout tx value is zero")
+	}
+
 	for i, tx := range decodedTobTxs {
+		if tx.To() == nil {
+			return fmt.Errorf("tx: %s is a contract creation tx. ontract creation txs are not allowed", tx.Hash())
+		}
 		statedb.SetTxContext(tx.Hash(), i)
 		tmpGasUsed := uint64(0)
 		receipt, err := core.ApplyTransaction(api.eth.APIBackend.ChainConfig(), api.eth.BlockChain(), &header.Coinbase, gp, statedb, &header, tx, &tmpGasUsed, vm.Config{}, nil)

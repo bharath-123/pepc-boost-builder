@@ -375,7 +375,6 @@ func (api *BlockValidationAPI) ValidateTobSubmission(params *TobValidationReques
 
 	// check if payout tx is present at the end
 	payoutTx := decodedTobTxs[len(decodedTobTxs)-1]
-	fmt.Printf("payout tx data: %s\n", payoutTx.Data())
 	if payoutTx.To() != nil && payoutTx.To().String() != params.ProposerFeeRecipient {
 		return fmt.Errorf("payout tx recipient %s does not match proposer fee recipient %s", payoutTx.To().String(), params.ProposerFeeRecipient)
 	}

@@ -1241,6 +1241,30 @@ func TestTobValidationRpc(t *testing.T) {
 			},
 			requiredError: "contract creation txs are not allowed",
 		},
+		{
+			description: "valid TOB txs",
+			tobTxs: []*types.Transaction{
+				types.NewTransaction(searcherNonce, common.Address{0x16}, big.NewInt(10), 21000, big.NewInt(2*params.InitialBaseFee), nil),
+				types.NewTransaction(searcherNonce+1, proposerFeeRecipient, big.NewInt(10), 21000, big.NewInt(2*params.InitialBaseFee), nil),
+			},
+			requiredError: "",
+		},
+		{
+			description: "insufficient balance in TOB tx",
+			tobTxs: []*types.Transaction{
+				types.NewTransaction(searcherNonce, common.Address{0x16}, big.NewInt(3e18), 21000, big.NewInt(2*params.InitialBaseFee), nil),
+				types.NewTransaction(searcherNonce+1, proposerFeeRecipient, big.NewInt(10), 21000, big.NewInt(2*params.InitialBaseFee), nil),
+			},
+			requiredError: "insufficient funds for gas * price + value",
+		},
+		{
+			description: "too high nonce",
+			tobTxs: []*types.Transaction{
+				types.NewTransaction(searcherNonce+100, common.Address{0x16}, big.NewInt(3e18), 21000, big.NewInt(2*params.InitialBaseFee), nil),
+				types.NewTransaction(searcherNonce+101, proposerFeeRecipient, big.NewInt(10), 21000, big.NewInt(2*params.InitialBaseFee), nil),
+			},
+			requiredError: "nonce too high",
+		},
 	}
 
 	for _, c := range cases {
@@ -1262,7 +1286,12 @@ func TestTobValidationRpc(t *testing.T) {
 				ProposerFeeRecipient: proposerFeeRecipient.String(),
 				TobTxs:               tobTxs,
 			})
-			require.ErrorContains(t, err, c.requiredError)
+			if c.requiredError != "" {
+				fmt.Printf("error is %s\n", err.Error())
+				require.ErrorContains(t, err, c.requiredError)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

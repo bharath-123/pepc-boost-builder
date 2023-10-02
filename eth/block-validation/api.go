@@ -378,7 +378,7 @@ func (api *BlockValidationAPI) ValidateTobSubmission(params *TobValidationReques
 	if payoutTx.To() != nil && payoutTx.To().String() != params.ProposerFeeRecipient {
 		return fmt.Errorf("payout tx recipient %s does not match proposer fee recipient %s", payoutTx.To().String(), params.ProposerFeeRecipient)
 	}
-	if payoutTx.Data() != nil {
+	if len(payoutTx.Data()) != 0 {
 		return fmt.Errorf("payout tx data is malformed")
 	}
 	if payoutTx.Value().Cmp(big.NewInt(0)) == 0 {
@@ -387,7 +387,7 @@ func (api *BlockValidationAPI) ValidateTobSubmission(params *TobValidationReques
 
 	for i, tx := range decodedTobTxs {
 		if tx.To() == nil {
-			return fmt.Errorf("tx: %s is a contract creation tx. ontract creation txs are not allowed", tx.Hash())
+			return fmt.Errorf("tx: %s is a contract creation tx. contract creation txs are not allowed", tx.Hash())
 		}
 		statedb.SetTxContext(tx.Hash(), i)
 		tmpGasUsed := uint64(0)

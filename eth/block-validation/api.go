@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strings"
 
 	bellatrixapi "github.com/attestantio/go-builder-client/api/bellatrix"
 	capellaapi "github.com/attestantio/go-builder-client/api/capella"
@@ -375,7 +376,7 @@ func (api *BlockValidationAPI) ValidateTobSubmission(params *TobValidationReques
 
 	// check if payout tx is present at the end
 	payoutTx := decodedTobTxs[len(decodedTobTxs)-1]
-	if payoutTx.To() != nil && payoutTx.To().String() != params.ProposerFeeRecipient {
+	if payoutTx.To() != nil && strings.ToLower(payoutTx.To().String()) != strings.ToLower(params.ProposerFeeRecipient) {
 		return fmt.Errorf("payout tx recipient %s does not match proposer fee recipient %s", payoutTx.To().String(), params.ProposerFeeRecipient)
 	}
 	if len(payoutTx.Data()) != 0 {

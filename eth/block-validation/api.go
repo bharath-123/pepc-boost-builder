@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/utils"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/tracers/logger"
@@ -365,11 +366,6 @@ func (api *BlockValidationAPI) BlockAssembler(params *BlockAssemblerRequest) (*c
 
 	tobTxs := types.Transactions(decodedTobTxs)
 
-	// TODO - check for gas limits
-
-	// TODO - if there are no TOB txs then we can just simulate the block rather then re-assembling it.
-	// These are TODOs for now to simplify integration testing
-
 	withdrawals := make(types.Withdrawals, len(params.RobPayload.ExecutionPayload.Withdrawals))
 	for i, withdrawal := range params.RobPayload.ExecutionPayload.Withdrawals {
 		withdrawals[i] = &types.Withdrawal{
@@ -408,6 +404,16 @@ func (api *BlockValidationAPI) BlockAssembler(params *BlockAssemblerRequest) (*c
 	finalPayload, err := engine.ExecutableDataToCapellaExecutionPayload(resolvedBlock.ExecutionPayload)
 	if err != nil {
 		return nil, err
+	}
+
+	parent := api.eth.BlockChain().GetBlockByHash(resolvedBlock.ExecutionPayload.ParentHash)
+	if parent == nil {
+		return nil, errors.New("parent block not found")
+	}
+
+	calculatedGasLimit := utils.CalcGasLimit(parent.GasLimit(), params.RegisteredGasLimit)
+	if calculatedGasLimit != resolvedBlock.ExecutionPayload.GasLimit {
+		return nil, errors.New("incorrect gas limit set")
 	}
 
 	return finalPayload, nil

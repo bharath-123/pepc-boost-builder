@@ -925,7 +925,6 @@ func TestBlockAssemblerWithNoRobTxs(t *testing.T) {
 		Withdrawals:           withdrawals,
 		SuggestedFeeRecipient: testValidatorAddr,
 	})
-	fmt.Printf("DEBUG: Exec data random is %x\n", execData.Random)
 	require.NoError(t, err)
 	require.EqualValues(t, len(execData.Withdrawals), 2)
 	require.EqualValues(t, len(execData.Transactions), 0)
@@ -1016,7 +1015,6 @@ func TestBlockAssemblerWithNoTobTxs(t *testing.T) {
 		Withdrawals:           withdrawals,
 		SuggestedFeeRecipient: testValidatorAddr,
 	})
-	fmt.Printf("DEBUG: Exec data random is %x\n", execData.Random)
 	require.NoError(t, err)
 	require.EqualValues(t, len(execData.Withdrawals), 2)
 	require.EqualValues(t, len(execData.Transactions), 2)
@@ -1178,4 +1176,93 @@ func TestBlockAssemblerWithTobAndRobTxs(t *testing.T) {
 
 	require.Equal(t, execDataTx1, actualRobTx1)
 	require.Equal(t, execDataTx2, actualRobTx2)
+}
+
+func TestTobValidationRpc(t *testing.T) {
+
+	genesis, preMergeBlocks := generatePreMergeChain(20)
+	os.Setenv("BUILDER_TX_SIGNING_KEY", testBuilderKeyHex)
+	time := preMergeBlocks[len(preMergeBlocks)-1].Time() + 5
+	genesis.Config.ShanghaiTime = &time
+
+	n, ethservice := startEthService(t, genesis, preMergeBlocks)
+	ethservice.Merger().ReachTTD()
+	defer n.Close()
+
+	api := NewBlockValidationAPI(ethservice, nil, false)
+	parent := preMergeBlocks[len(preMergeBlocks)-1]
+
+	api.eth.APIBackend.Miner().SetEtherbase(testBuilderAddr)
+
+	statedb, _ := ethservice.BlockChain().StateAt(parent.Root())
+	//nonce := statedb.GetNonce(testAddr)
+	searcherNonce := statedb.GetNonce(testSearcherAddr)
+
+	signer := types.LatestSigner(ethservice.BlockChain().Config())
+
+	proposerFeeRecipient := common.HexToAddress("0xb5fBD6E8a4ce4d53d22347d544555880a51b00D7")
+
+	contractCreationTx := types.NewContractCreation(searcherNonce, big.NewInt(10), 21000, big.NewInt(2*params.InitialBaseFee), nil)
+
+	cases := []struct {
+		description   string
+		tobTxs        []*types.Transaction
+		requiredError string
+	}{
+		{
+			description: "payout tx not addressed to proposer fee recipient",
+			tobTxs: []*types.Transaction{
+				types.NewTransaction(searcherNonce, common.Address{0x16}, big.NewInt(10), 21000, big.NewInt(2*params.InitialBaseFee), nil),
+				types.NewTransaction(searcherNonce+1, common.Address{0x16}, big.NewInt(10), 21000, big.NewInt(2*params.InitialBaseFee), nil),
+			},
+			requiredError: fmt.Sprintf("payout tx recipient %s does not match proposer fee recipient %s", common.Address{0x16}.String(), proposerFeeRecipient.String()),
+		},
+		{
+			description: "payout tx data is malformed",
+			tobTxs: []*types.Transaction{
+				types.NewTransaction(searcherNonce, common.Address{0x16}, big.NewInt(10), 21000, big.NewInt(2*params.InitialBaseFee), nil),
+				types.NewTransaction(searcherNonce+1, proposerFeeRecipient, big.NewInt(10), 21000, big.NewInt(2*params.InitialBaseFee), []byte("payout")),
+			},
+			requiredError: "payout tx data is malformed",
+		},
+		{
+			description: "payout tx data has zero value",
+			tobTxs: []*types.Transaction{
+				types.NewTransaction(searcherNonce, common.Address{0x16}, big.NewInt(10), 21000, big.NewInt(2*params.InitialBaseFee), nil),
+				types.NewTransaction(searcherNonce+1, proposerFeeRecipient, big.NewInt(0), 21000, big.NewInt(2*params.InitialBaseFee), nil),
+			},
+			requiredError: "payout tx value is zero",
+		},
+		{
+			description: "one of the TOB txs has To address as nil",
+			tobTxs: []*types.Transaction{
+				contractCreationTx,
+				types.NewTransaction(searcherNonce+1, proposerFeeRecipient, big.NewInt(10), 21000, big.NewInt(2*params.InitialBaseFee), nil),
+			},
+			requiredError: "contract creation txs are not allowed",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.description, func(t *testing.T) {
+			tobTxs := bellatrixUtil.ExecutionPayloadTransactions{
+				Transactions: []bellatrix.Transaction{},
+			}
+			for _, tx := range c.tobTxs {
+				signedTx, err := types.SignTx(tx, signer, testSearcherKey)
+				require.NoError(t, err)
+				binaryTx, err := signedTx.MarshalBinary()
+				require.NoError(t, err)
+				tobTxs.Transactions = append(tobTxs.Transactions, binaryTx)
+			}
+			parentHash := parent.Hash()
+
+			err := api.ValidateTobSubmission(&TobValidationRequest{
+				ParentHash:           parentHash.String(),
+				ProposerFeeRecipient: proposerFeeRecipient.String(),
+				TobTxs:               tobTxs,
+			})
+			require.ErrorContains(t, err, c.requiredError)
+		})
+	}
 }

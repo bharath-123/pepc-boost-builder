@@ -1,6 +1,7 @@
 package blockvalidation
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,8 @@ import (
 	bellatrixUtil "github.com/attestantio/go-eth2-client/util/bellatrix"
 	"github.com/ethereum/go-ethereum/beacon/engine"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/misc"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/utils"
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -294,6 +297,91 @@ func (api *BlockValidationAPI) ValidateBuilderSubmissionV2(params *BuilderBlockV
 	}
 
 	log.Info("validated block", "hash", block.Hash(), "number", block.NumberU64(), "parentHash", block.ParentHash())
+	return nil
+}
+
+type TobValidationRequest struct {
+	TobTxs     bellatrixUtil.ExecutionPayloadTransactions
+	ParentHash string
+}
+
+type IntermediateTobValidationRequest struct {
+	TobTxs     []byte `json:"tob_txs"`
+	ParentHash string `json:"parent_hash"`
+}
+
+func (t *TobValidationRequest) MarshalJson() ([]byte, error) {
+	sszedTobTxs, err := t.TobTxs.MarshalSSZ()
+	if err != nil {
+		return nil, err
+	}
+
+	intermediateStruct := IntermediateTobValidationRequest{
+		TobTxs:     sszedTobTxs,
+		ParentHash: t.ParentHash,
+	}
+
+	return json.Marshal(intermediateStruct)
+}
+
+func (t *TobValidationRequest) UnmarshalJson(data []byte) error {
+	var intermediateJson IntermediateTobValidationRequest
+	err := json.Unmarshal(data, &intermediateJson)
+	if err != nil {
+		return err
+	}
+
+	err = t.TobTxs.UnmarshalSSZ(intermediateJson.TobTxs)
+	if err != nil {
+		return err
+	}
+	t.ParentHash = intermediateJson.ParentHash
+
+	return nil
+}
+
+func (api *BlockValidationAPI) ValidateTobSubmission(params *TobValidationRequest) error {
+	parentBlock, err := api.eth.APIBackend.BlockByHash(context.Background(), common.HexToHash(params.ParentHash))
+	if err != nil {
+		return err
+	}
+
+	statedb, parentHeader, err := api.eth.APIBackend.StateAndHeaderByNumber(context.Background(), rpc.BlockNumber(parentBlock.NumberU64()))
+	if err != nil {
+		return fmt.Errorf("failed to get parent block header: %w", err)
+	}
+	header := types.Header{
+		ParentHash: parentHeader.Hash(),
+		Number:     new(big.Int).Add(parentHeader.Number, common.Big1),
+		GasLimit:   parentHeader.GasLimit,
+		Time:       parentHeader.Time + 12,
+		Difficulty: new(big.Int).Set(parentHeader.Difficulty),
+		Coinbase:   parentHeader.Coinbase,
+		BaseFee:    misc.CalcBaseFee(api.eth.APIBackend.ChainConfig(), parentHeader),
+	}
+	gp := new(core.GasPool).AddGas(header.GasLimit)
+
+	transactionBytes := make([][]byte, len(params.TobTxs.Transactions))
+	for i, txHexBytes := range params.TobTxs.Transactions {
+		transactionBytes[i] = txHexBytes[:]
+	}
+	decodedTobTxs, err := engine.DecodeTransactions(transactionBytes)
+	if err != nil {
+		return err
+	}
+
+	for i, tx := range decodedTobTxs {
+		statedb.SetTxContext(tx.Hash(), i)
+		tmpGasUsed := uint64(0)
+		receipt, err := core.ApplyTransaction(api.eth.APIBackend.ChainConfig(), api.eth.BlockChain(), &header.Coinbase, gp, statedb, &header, tx, &tmpGasUsed, vm.Config{}, nil)
+		if err != nil {
+			return err
+		}
+		if receipt.Status != types.ReceiptStatusSuccessful {
+			return fmt.Errorf("tx with hash %s reverted", tx.Hash())
+		}
+	}
+
 	return nil
 }
 

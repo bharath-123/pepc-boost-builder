@@ -227,7 +227,7 @@ func (r *RemoteRelay) getSlotValidatorMapFromRelay() (map[uint64]ValidatorData, 
 func (r *RemoteRelay) GetTobGasReservations() (uint64, error) {
 	var tobReservations uint64
 
-	code, err := SendHTTPRequest(context.TODO(), *http.DefaultClient, http.MethodGet, r.config.Endpoint+"/relay/v1/builder/validators", nil, &tobReservations)
+	code, err := SendHTTPRequest(context.TODO(), *http.DefaultClient, http.MethodGet, r.config.Endpoint+"/relay/v1/builder/tob_gas_reservations", nil, &tobReservations)
 	if err != nil {
 		return 0, err
 	}

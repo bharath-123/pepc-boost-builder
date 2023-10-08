@@ -111,6 +111,10 @@ func (r *RemoteRelayAggregator) GetValidatorForSlot(nextSlot uint64) (ValidatorD
 	return ValidatorData{}, ErrValidatorNotFound
 }
 
+func (r *RemoteRelayAggregator) GetTobGasReservations() (uint64, error) {
+	return 0, nil
+}
+
 func (r *RemoteRelayAggregator) updateRelayRegistrations(nextSlot uint64, registrationsCh chan *RelayValidatorRegistration, topRegistrationCh chan ValidatorData) {
 	defer close(topRegistrationCh)
 

@@ -240,6 +240,10 @@ func (r *LocalRelay) GetValidatorForSlot(nextSlot uint64) (ValidatorData, error)
 	return ValidatorData{}, errors.New("missing validator")
 }
 
+func (r *LocalRelay) GetTobGasReservations() (uint64, error) {
+	return 0, nil
+}
+
 func (r *LocalRelay) handleGetHeader(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	slot, err := strconv.Atoi(vars["slot"])

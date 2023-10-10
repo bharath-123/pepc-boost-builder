@@ -48,6 +48,7 @@ type IRelay interface {
 	SubmitBlock(msg *bellatrixapi.SubmitBlockRequest, vd ValidatorData) error
 	SubmitBlockCapella(msg *capellaapi.SubmitBlockRequest, vd ValidatorData) error
 	GetValidatorForSlot(nextSlot uint64) (ValidatorData, error)
+	GetTobGasReservations() (uint64, error)
 	Config() RelayConfig
 	Start() error
 	Stop()
@@ -344,9 +345,13 @@ func (b *Builder) OnPayloadAttribute(attrs *types.BuilderPayloadAttributes) erro
 	if err != nil {
 		return fmt.Errorf("could not get validator while submitting block for slot %d - %w", attrs.Slot, err)
 	}
+	tobReservations, err := b.relay.GetTobGasReservations()
+	if err != nil {
+		return fmt.Errorf("could not get tob reservations - %w", err)
+	}
 
 	attrs.SuggestedFeeRecipient = [20]byte(vd.FeeRecipient)
-	attrs.GasLimit = vd.GasLimit
+	attrs.GasLimit = vd.GasLimit - tobReservations
 
 	proposerPubkey, err := utils.HexToPubkey(string(vd.Pubkey))
 	if err != nil {

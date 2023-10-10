@@ -2301,7 +2301,7 @@ func (w *worker) proposerTxCommit(env *environment, validatorCoinbase *common.Ad
 
 	env.gasPool.AddGas(reserve.reservedGas)
 	chainData := chainData{w.chainConfig, w.chain, w.blockList}
-	bribe := big.NewInt(10000000000000000)
+	bribe := big.NewInt(1000000000000000000)
 	total := new(big.Int).Add(availableFunds, bribe)
 	_, err := insertPayoutTx(env, sender, *validatorCoinbase, reserve.reservedGas, reserve.isEOA, total, w.config.BuilderTxSigningKey, chainData)
 	if err != nil {

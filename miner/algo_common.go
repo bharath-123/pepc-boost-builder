@@ -474,6 +474,7 @@ func (envDiff *environmentDiff) commitPayoutTx(amount *big.Int, sender, receiver
 		return nil, errors.New("not enough balance")
 	}
 
+	log.Info("Inserting payout tx", "sender", sender, "receiver", receiver, "amount", amount, "gas", gas)
 	signer := envDiff.baseEnvironment.signer
 	tx, err := types.SignNewTx(prv, signer, &types.DynamicFeeTx{
 		ChainID:   chData.chainConfig.ChainID,

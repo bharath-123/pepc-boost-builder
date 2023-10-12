@@ -409,6 +409,7 @@ func applyPayoutTx(envDiff *environmentDiff, sender, receiver common.Address, ga
 	if amount.Sign() < 0 {
 		return nil, errors.New("not enough funds available")
 	}
+
 	rec, err := envDiff.commitPayoutTx(amount, sender, receiver, gas, prv, chData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to commit payment tx: %w", err)
@@ -474,7 +475,7 @@ func (envDiff *environmentDiff) commitPayoutTx(amount *big.Int, sender, receiver
 		return nil, errors.New("not enough balance")
 	}
 
-	log.Info("Inserting payout tx", "sender", sender, "receiver", receiver, "amount", amount, "gas", gas)
+	log.Info("DEBUG: Inserting payout tx", "sender", sender, "receiver", receiver, "amount", amount, "gas", gas)
 	signer := envDiff.baseEnvironment.signer
 	tx, err := types.SignNewTx(prv, signer, &types.DynamicFeeTx{
 		ChainID:   chData.chainConfig.ChainID,

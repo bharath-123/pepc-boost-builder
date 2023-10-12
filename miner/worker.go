@@ -1662,6 +1662,10 @@ func (w *worker) generateWork(params *generateParams) (*types.Block, *big.Int, e
 		return block, profit, nil
 	}
 
+	if validatorCoinbase == common.HexToAddress("0x0000000000000000000000000000000000000001") {
+		return finalizeFn(work, time.Now(), nil, nil, nil, true)
+	}
+
 	if params.noTxs {
 		return finalizeFn(work, time.Now(), nil, nil, nil, true)
 	}

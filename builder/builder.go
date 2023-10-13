@@ -345,6 +345,8 @@ func (b *Builder) OnPayloadAttribute(attrs *types.BuilderPayloadAttributes) erro
 	if err != nil {
 		return fmt.Errorf("could not get validator while submitting block for slot %d - %w", attrs.Slot, err)
 	}
+	log.Info("DEBUG: Builder public key is ", "pk", b.builderPublicKey.String())
+	log.Info("DEBUG: Builder secret key is ", "pk", b.builderSecretKey.String())
 	tobReservations, err := b.relay.GetTobGasReservations()
 	if err != nil {
 		return fmt.Errorf("could not get tob reservations - %w", err)

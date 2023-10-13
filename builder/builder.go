@@ -342,7 +342,7 @@ func (b *Builder) OnPayloadAttribute(attrs *types.BuilderPayloadAttributes) erro
 	}
 
 	log.Info("DEBUG: Builder public key is ", "pk", b.builderPublicKey.String())
-	log.Info("DEBUG: Builder secret key is ", "pk", b.builderSecretKey.String())
+	log.Info("DEBUG: Builder secret key is ", "pk", b.builderSecretKey.)
 
 	vd, err := b.relay.GetValidatorForSlot(attrs.Slot)
 	if err != nil {

@@ -1729,7 +1729,7 @@ func (w *worker) finalizeBlock(work *environment, withdrawals types.Withdrawals,
 	}
 
 	blockProfit := big.NewInt(0)
-	if !work.isAssembler {
+	if work.isAssembler {
 		blockProfit, err = w.checkProposerPayment(work, validatorCoinbase)
 		if err != nil {
 			return nil, nil, err
@@ -1757,8 +1757,15 @@ func (w *worker) checkProposerPayment(work *environment, validatorCoinbase commo
 		log.Error("last transaction is not to the proposer!", "lastTx", lastTx)
 		return nil, errors.New("last transaction is not proposer payment")
 	}
+	builderPayout := work.txs[len(work.txs)-2]
+	// TODO - add checks for builder fee recipient later
+	receipt = work.receipts[len(work.receipts)-2]
+	if receipt.TxHash != builderPayout.Hash() || receipt.Status != types.ReceiptStatusSuccessful {
+		log.Error("builder payout not successful!", "builderPayout", builderPayout, "receipt", receipt)
+		return nil, errors.New("builder payout not successful")
+	}
 
-	return new(big.Int).Set(lastTx.Value()), nil
+	return new(big.Int).Add(lastTx.Value(), builderPayout.Value()), nil
 }
 
 // commitWork generates several new sealing tasks based on the parent block

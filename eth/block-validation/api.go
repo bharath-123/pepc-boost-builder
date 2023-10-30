@@ -463,7 +463,12 @@ func (b *BlockAssemblerRequest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (api *BlockValidationAPI) BlockAssembler(params *BlockAssemblerRequest) (*capella.ExecutionPayload, error) {
+type BlockAssemblerResponse struct {
+	ExecutionPayload *capella.ExecutionPayload `json:"execution_payload"`
+	BlockValue       *big.Int                  `json:"block_value"`
+}
+
+func (api *BlockValidationAPI) BlockAssembler(params *BlockAssemblerRequest) (*BlockAssemblerResponse, error) {
 	log.Info("BlockAssembler", "tobTxs", len(params.TobTxs.Transactions), "robPayload", params.RobPayload)
 	transactionBytes := make([][]byte, len(params.TobTxs.Transactions))
 	for i, txHexBytes := range params.TobTxs.Transactions {
@@ -534,5 +539,8 @@ func (api *BlockValidationAPI) BlockAssembler(params *BlockAssemblerRequest) (*c
 		return nil, errors.New("incorrect gas limit set")
 	}
 
-	return finalPayload, nil
+	return &BlockAssemblerResponse{
+		ExecutionPayload: finalPayload,
+		BlockValue:       resolvedBlock.BlockValue,
+	}, nil
 }

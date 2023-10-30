@@ -34,8 +34,11 @@ import (
 // AssemblerTxLists contains the lists of the ToB and RoB txs which are to be
 // used to build a final payload
 type AssemblerTxLists struct {
-	TobTxs *types.Transactions
-	RobTxs *types.Transactions
+	TobTxs               *types.Transactions
+	RobTxs               *types.Transactions
+	BuilderFeeRecipient  common.Address
+	ProposerFeeRecipient common.Address
+	BuilderMevRewardPct  uint64
 }
 
 // BuildPayloadArgs contains the provided parameters for building payload.

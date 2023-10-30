@@ -1666,10 +1666,9 @@ func (w *worker) generateWork(params *generateParams) (*types.Block, *big.Int, e
 		return finalizeFn(work, time.Now(), nil, nil, nil, true)
 	}
 
-	// TODO - we need to yet brainstorm validator payouts in the case of PEPC-Boost
 	var paymentTxReserve *proposerTxReservation
 	// no need of adding payouts if we are assembling txs
-	if !work.isAssembler {
+	if work.isAssembler {
 		paymentTxReserve, err = w.proposerTxPrepare(work, &validatorCoinbase)
 		if err != nil {
 			return nil, nil, err
@@ -1705,12 +1704,12 @@ func (w *worker) generateWork(params *generateParams) (*types.Block, *big.Int, e
 		return finalizeFn(work, orderCloseTime, blockBundles, allBundles, usedSbundles, true)
 	}
 
-	if !work.isAssembler {
-		err = w.proposerTxCommit(work, &validatorCoinbase, paymentTxReserve)
-		if err != nil {
-			return nil, nil, err
-		}
+	//if !work.isAssembler {
+	err = w.proposerTxCommit(work, &validatorCoinbase, paymentTxReserve, params.assemblerTxs)
+	if err != nil {
+		return nil, nil, err
 	}
+	//}
 
 	return finalizeFn(work, orderCloseTime, blockBundles, allBundles, usedSbundles, false)
 }
@@ -2284,7 +2283,7 @@ func (w *worker) proposerTxPrepare(env *environment, validatorCoinbase *common.A
 	}, nil
 }
 
-func (w *worker) proposerTxCommit(env *environment, validatorCoinbase *common.Address, reserve *proposerTxReservation) error {
+func (w *worker) proposerTxCommit(env *environment, validatorCoinbase *common.Address, reserve *proposerTxReservation, assemblerTxLists AssemblerTxLists) error {
 	if reserve == nil || validatorCoinbase == nil {
 		return nil
 	}
@@ -2298,14 +2297,40 @@ func (w *worker) proposerTxCommit(env *environment, validatorCoinbase *common.Ad
 	if availableFunds.Sign() <= 0 {
 		return errors.New("builder balance decreased")
 	}
+	availableFunds.Add(availableFunds, big.NewInt(100000000000000000))
 
-	env.gasPool.AddGas(reserve.reservedGas)
-	chainData := chainData{w.chainConfig, w.chain, w.blockList}
-	_, err := insertPayoutTx(env, sender, *validatorCoinbase, reserve.reservedGas, reserve.isEOA, availableFunds, w.config.BuilderTxSigningKey, chainData)
-	if err != nil {
-		return err
+	if !env.isAssembler {
+		//env.gasPool.AddGas(reserve.reservedGas)
+		//chainData := chainData{w.chainConfig, w.chain, w.blockList}
+		//// insert payout for the builder
+		//_, err := insertPayoutTx(env, sender, *validatorCoinbase, reserve.reservedGas, reserve.isEOA, availableFunds, w.config.BuilderTxSigningKey, chainData)
+		//if err != nil {
+		//	return err
+		//}
+		return nil
+	} else {
+		// compute the %ge payout for builder and validator from availableFunds
+		builderPayoutNum := new(big.Int).Mul(availableFunds, big.NewInt(int64(assemblerTxLists.BuilderMevRewardPct)))
+		builderPayoutNum = builderPayoutNum.Div(builderPayoutNum, big.NewInt(100))
+		validatorPayoutNum := new(big.Int).Sub(availableFunds, builderPayoutNum)
+
+		env.gasPool.AddGas(reserve.reservedGas)
+		chainData := chainData{w.chainConfig, w.chain, w.blockList}
+		// insert payout for the builder
+		_, err := insertPayoutTx(env, sender, assemblerTxLists.BuilderFeeRecipient, reserve.reservedGas, reserve.isEOA, builderPayoutNum, w.config.BuilderTxSigningKey, chainData)
+		if err != nil {
+			return err
+		}
+
+		env.gasPool.AddGas(reserve.reservedGas)
+		_, err = insertPayoutTx(env, sender, *validatorCoinbase, reserve.reservedGas, reserve.isEOA, validatorPayoutNum, w.config.BuilderTxSigningKey, chainData)
+		if err != nil {
+			return err
+		}
+
+		// insert remaining payout for the validator
+		return nil
 	}
-	return nil
 }
 
 // signalToErr converts the interruption signal to a concrete error type for return.

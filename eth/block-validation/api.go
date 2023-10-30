@@ -404,15 +404,21 @@ func (api *BlockValidationAPI) ValidateTobSubmission(params *TobValidationReques
 }
 
 type BlockAssemblerRequest struct {
-	TobTxs             bellatrixUtil.ExecutionPayloadTransactions
-	RobPayload         capellaapi.SubmitBlockRequest
-	RegisteredGasLimit uint64
+	TobTxs               bellatrixUtil.ExecutionPayloadTransactions
+	RobPayload           capellaapi.SubmitBlockRequest
+	RegisteredGasLimit   uint64
+	BuilderFeeRecipient  string
+	ProposerFeeRecipient string
+	BuilderMevRewardPct  uint64
 }
 
 type IntermediateBlockAssemblerRequest struct {
-	TobTxs             []byte `json:"tob_txs"`
-	RobPayload         []byte `json:"rob_payload"`
-	RegisteredGasLimit uint64 `json:"registered_gas_limit,string"`
+	TobTxs               []byte `json:"tob_txs"`
+	RobPayload           []byte `json:"rob_payload"`
+	RegisteredGasLimit   uint64 `json:"registered_gas_limit,string"`
+	BuilderFeeRecipient  string
+	ProposerFeeRecipient string
+	BuilderMevRewardPct  uint64 // number b/w 0 - 100 where 100 is 100%
 }
 
 func (r *BlockAssemblerRequest) MarshalJSON() ([]byte, error) {
@@ -425,9 +431,12 @@ func (r *BlockAssemblerRequest) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	intermediateStruct := IntermediateBlockAssemblerRequest{
-		TobTxs:             sszedTobTxs,
-		RobPayload:         encodedRobPayload,
-		RegisteredGasLimit: r.RegisteredGasLimit,
+		TobTxs:               sszedTobTxs,
+		RobPayload:           encodedRobPayload,
+		RegisteredGasLimit:   r.RegisteredGasLimit,
+		BuilderFeeRecipient:  r.BuilderFeeRecipient,
+		ProposerFeeRecipient: r.ProposerFeeRecipient,
+		BuilderMevRewardPct:  r.BuilderMevRewardPct,
 	}
 
 	return json.Marshal(intermediateStruct)
@@ -492,8 +501,11 @@ func (api *BlockValidationAPI) BlockAssembler(params *BlockAssemblerRequest) (*c
 		Withdrawals:  withdrawals,
 		BlockHook:    nil,
 		AssemblerTxs: miner.AssemblerTxLists{
-			TobTxs: &tobTxs,
-			RobTxs: &robTxs,
+			TobTxs:               &tobTxs,
+			RobTxs:               &robTxs,
+			BuilderFeeRecipient:  common.HexToAddress(params.BuilderFeeRecipient),
+			ProposerFeeRecipient: common.HexToAddress(params.ProposerFeeRecipient),
+			BuilderMevRewardPct:  params.BuilderMevRewardPct,
 		},
 	})
 	if err != nil {

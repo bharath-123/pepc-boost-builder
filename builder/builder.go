@@ -304,6 +304,8 @@ func (b *Builder) submitCapellaBlock(block *types.Block, blockValue *big.Int, or
 		GasLimit:             executableData.ExecutionPayload.GasLimit,
 		GasUsed:              executableData.ExecutionPayload.GasUsed,
 		Value:                value,
+		BuilderFeeRecipient:  common.HexToAddress("0x1Dd8f12e17519732b56bdcFaea9D10FB55E2cb6C").String(),
+		BuilderMevRewardPct:  100,
 	}
 
 	signature, err := ssz.SignMessage(&blockBidMsg, b.builderSigningDomain, b.builderSecretKey)

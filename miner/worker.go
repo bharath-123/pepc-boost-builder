@@ -2316,10 +2316,15 @@ func (w *worker) proposerTxCommit(env *environment, validatorCoinbase *common.Ad
 		//}
 		return nil
 	} else {
+		log.Info("DEBUG: Computing builder and validator payouts!!\n")
+		log.Info("DEBUG: total funds are ", availableFunds)
 		// compute the %ge payout for builder and validator from availableFunds
 		builderPayoutNum := new(big.Int).Mul(availableFunds, big.NewInt(int64(assemblerTxLists.BuilderMevRewardPct)))
 		builderPayoutNum = builderPayoutNum.Div(builderPayoutNum, big.NewInt(100))
 		validatorPayoutNum := new(big.Int).Sub(availableFunds, builderPayoutNum)
+
+		log.Info("DEBUG: builder payout is ", builderPayoutNum)
+		log.Info("DEBUG: validator payout is ", validatorPayoutNum)
 
 		env.gasPool.AddGas(reserve.reservedGas)
 		chainData := chainData{w.chainConfig, w.chain, w.blockList}
@@ -2328,12 +2333,14 @@ func (w *worker) proposerTxCommit(env *environment, validatorCoinbase *common.Ad
 		if err != nil {
 			return err
 		}
+		log.Info("DEBUG: inserted builder payout tx!!\n")
 
 		env.gasPool.AddGas(reserve.reservedGas)
 		_, err = insertPayoutTx(env, sender, *validatorCoinbase, reserve.reservedGas, reserve.isEOA, validatorPayoutNum, w.config.BuilderTxSigningKey, chainData)
 		if err != nil {
 			return err
 		}
+		log.Info("DEBUG: inserted validator payout tx!!\n")
 
 		// insert remaining payout for the validator
 		return nil
